@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Loader2, LogIn } from "lucide-react";
 
 export default function LoginPage() {
@@ -49,24 +50,62 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <h2 className="mt-6 text-3xl font-bold text-gray-900">
-            MediaPro Admin
-          </h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Faça login para acessar o painel administrativo
-          </p>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex flex-col lg:flex-row">
+      {/* Botão de tema no canto superior direito */}
+      <div className="absolute top-4 right-4 z-10">
+        <ModeToggle />
+      </div>
+      
+      {/* Lado esquerdo - Branding */}
+      <div className="hidden lg:flex lg:flex-1 lg:flex-col lg:justify-center lg:px-20 xl:px-24">
+        <div className="mx-auto max-w-xl">
+          <div className="space-y-6">
+            <div className="space-y-2">
+              <h1 className="text-4xl font-bold text-foreground">
+                MediaPro Admin
+              </h1>
+              <p className="text-xl text-muted-foreground">
+                Sistema de administração completo para gerenciar criadores, leilões e conteúdo.
+              </p>
+            </div>
+            <div className="space-y-4 text-muted-foreground">
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full"></div>
+                <span>Validação de usuários e criadores</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full"></div>
+                <span>Gerenciamento de leilões</span>
+              </div>
+              <div className="flex items-center space-x-3">
+                <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full"></div>
+                <span>Moderação de conteúdo</span>
+              </div>
+            </div>
+          </div>
         </div>
+      </div>
+      
+      {/* Lado direito - Formulário de Login */}
+      <div className="flex flex-1 flex-col justify-center py-12 px-4 sm:px-6 lg:px-20 xl:px-24">
+        <div className="mx-auto w-full max-w-sm lg:w-96">
+          {/* Logo/Título para mobile */}
+          <div className="lg:hidden text-center mb-8">
+            <h2 className="text-3xl font-bold text-foreground">
+              MediaPro Admin
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Sistema de administração
+            </p>
+          </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center">Entrar</CardTitle>
-            <CardDescription className="text-center">
-              Digite suas credenciais de administrador
-            </CardDescription>
-          </CardHeader>
+          <Card className="shadow-xl border-0 bg-card/50 backdrop-blur">
+            <CardHeader className="space-y-1">
+              <CardTitle className="text-2xl font-bold text-center">Bem-vindo</CardTitle>
+              <CardDescription className="text-center">
+                Digite suas credenciais para acessar o sistema
+              </CardDescription>
+            </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
@@ -121,12 +160,13 @@ export default function LoginPage() {
             </form>
 
             <div className="mt-6 text-center">
-              <p className="text-xs text-gray-500">
-                Para testar, use: admin@test.com / password
+              <p className="text-xs text-muted-foreground">
+                Para testar, use: admin@mediapro.com / Teste123
               </p>
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

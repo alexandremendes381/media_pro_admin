@@ -12,7 +12,17 @@ import {
   UserApprovalResponse,
   Auction,
   AuctionStatusUpdate,
-  AuctionStats
+  AuctionStats,
+  UpgradeRequest,
+  UpgradeApprovalRequest,
+  UpgradeApprovalResponse,
+  UpgradeStats,
+  CreatorUpgradeStatus,
+  UpgradeStage,
+  UpgradeResumo,
+  CreatorStepsResponse,
+  StepValidationRequest,
+  StepValidationResponse
 } from '@/types/api';
 
 // Base URL da API
@@ -566,6 +576,47 @@ export const userValidationAPI = {
       rejeitado: stats.usuarios_reprovados,
       total: stats.total_usuarios
     };
+  },
+
+  // Obter detalhes dos passos para validação granular
+  getCreatorSteps: async (requestId: number): Promise<CreatorStepsResponse> => {
+    const url = `${API_BASE_URL}/api/v1/admin/creator-upgrade-requests/${requestId}/steps`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
+  },
+
+  // Validar um passo específico
+  validateCreatorStep: async (
+    requestId: number, 
+    stepNumber: number, 
+    validation: StepValidationRequest
+  ): Promise<StepValidationResponse> => {
+    const url = `${API_BASE_URL}/api/v1/admin/creator-upgrade-requests/${requestId}/steps/${stepNumber}/validate`;
+    
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: getHeaders(true),
+      body: JSON.stringify(validation),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    return data;
   },
 };
 
@@ -1229,6 +1280,450 @@ ENDPOINTS IMPLEMENTADOS (17):
 ✅ POST /api/v1/admin/system/backup
 */
 
+// === UPGRADE/PERFIL API ===
+
+export const upgradeAPI = {
+  // Listar todas as solicitações de upgrade
+  getAllUpgradeRequests: async (params?: {
+    page?: number;
+    per_page?: number;
+    status_filter?: 'pendente' | 'aprovado' | 'rejeitado' | 'all';
+  }): Promise<{
+    requests: UpgradeRequest[];
+    total: number;
+    page: number;
+    per_page: number;
+    total_pages: number;
+  }> => {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+    if (params?.status_filter && params.status_filter !== 'all') {
+      queryParams.append('status_filter', params.status_filter);
+    }
+
+    const query = queryParams.toString();
+    const url = `${API_BASE_URL}/api/v1/admin/upgrades${query ? `?${query}` : ''}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log('📊 Solicitações de upgrade recebidas:', data);
+    return data;
+  },
+
+  // Obter detalhes de uma solicitação específica
+  getUpgradeRequest: async (upgradeId: number): Promise<UpgradeRequest> => {
+    const url = `${API_BASE_URL}/api/v1/admin/upgrades/${upgradeId}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log(`📊 Upgrade ${upgradeId} recebido:`, data);
+    return data;
+  },
+
+  // Aprovar ou rejeitar solicitação de upgrade
+  processUpgradeRequest: async (
+    upgradeId: number, 
+    approved: boolean, 
+    rejectionReason?: string
+  ): Promise<UpgradeApprovalResponse> => {
+    const url = `${API_BASE_URL}/api/v1/admin/upgrades/${upgradeId}/process`;
+    
+    const requestBody: UpgradeApprovalRequest = {
+      upgrade_id: upgradeId,
+      approved,
+      rejection_reason: rejectionReason,
+    };
+
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: getHeaders(true),
+      body: JSON.stringify(requestBody),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log(`✅ Upgrade ${upgradeId} processado:`, data);
+    return data;
+  },
+
+  // Aprovar upgrade (método de conveniência)
+  approveUpgrade: async (upgradeId: number): Promise<UpgradeApprovalResponse> => {
+    return upgradeAPI.processUpgradeRequest(upgradeId, true);
+  },
+
+  // Rejeitar upgrade (método de conveniência)
+  rejectUpgrade: async (upgradeId: number, reason: string): Promise<UpgradeApprovalResponse> => {
+    return upgradeAPI.processUpgradeRequest(upgradeId, false, reason);
+  },
+
+  // Obter estatísticas de upgrades
+  getUpgradeStats: async (): Promise<UpgradeStats> => {
+    const allRequests = await upgradeAPI.getAllUpgradeRequests({ per_page: 1000 });
+    
+    const total_requests = allRequests.total;
+    const pendentes = allRequests.requests.filter(r => r.status === 'pendente').length;
+    const aprovados = allRequests.requests.filter(r => r.status === 'aprovado').length;
+    const rejeitados = allRequests.requests.filter(r => r.status === 'rejeitado').length;
+
+    return {
+      total_requests,
+      pendentes,
+      aprovados,
+      rejeitados,
+    };
+  },
+
+  // Obter status detalhado de upgrade de criador com stages
+  getCreatorUpgradeStatusDetailed: async (userId: number): Promise<CreatorUpgradeStatus> => {
+    const url = `${API_BASE_URL}/api/v1/users/creator-upgrade-status-detalhado`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log(`📊 Status detalhado do upgrade:`, data);
+    return data;
+  },
+
+  // Versão real da API quando o endpoint de admin estiver disponível
+  getAllCreatorUpgradeStatusesReal: async (params?: {
+    page?: number;
+    per_page?: number;
+    status_filter?: string;
+  }): Promise<{
+    upgrades: CreatorUpgradeStatus[];
+    total: number;
+    page: number;
+    per_page: number;
+    total_pages: number;
+  }> => {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+    if (params?.status_filter) queryParams.append('status_filter', params.status_filter);
+
+    const query = queryParams.toString();
+    // TODO: Substituir por endpoint real quando disponível
+    const url = `${API_BASE_URL}/api/v1/admin/creator-upgrade-status-detalhado${query ? `?${query}` : ''}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log('📊 Status de upgrades (admin - real):', data);
+    return data;
+  },
+
+  // Listar todos os usuários com status detalhado de upgrade (para admin)
+  getAllCreatorUpgradeStatuses: async (params?: {
+    page?: number;
+    per_page?: number;
+    status_filter?: string;
+  }): Promise<{
+    upgrades: CreatorUpgradeStatus[];
+    total: number;
+    page: number;
+    per_page: number;
+    total_pages: number;
+  }> => {
+    // Por enquanto, vamos usar uma simulação de dados baseada na API real
+    // Isso deve ser substituído quando o endpoint de admin estiver disponível
+    
+    console.log('⚠️ Usando dados simulados para upgrade status - aguardando endpoint de admin');
+    
+    // Simulação de dados baseados na estrutura real da API
+    const mockData = {
+      upgrades: [
+        {
+          id: 1,
+          user_id: 123,
+          status_geral: "Em Progresso (3/6) 🚀",
+          progresso_percentage: 50,
+          stage_atual: 4,
+          stages: [
+            {
+              stage: 1,
+              nome: "Dados Pessoais",
+              concluido: true,
+              data_conclusao: "2025-11-05T10:30:00",
+              dados_preenchidos: true,
+              observacoes: null
+            },
+            {
+              stage: 2,
+              nome: "Perfil Criador",
+              concluido: true,
+              data_conclusao: "2025-11-05T11:15:00",
+              dados_preenchidos: true,
+              observacoes: null
+            },
+            {
+              stage: 3,
+              nome: "Capa e Biografia",
+              concluido: true,
+              data_conclusao: "2025-11-05T12:00:00",
+              dados_preenchidos: true,
+              observacoes: null
+            },
+            {
+              stage: 4,
+              nome: "Planos de Assinatura",
+              concluido: false,
+              data_conclusao: null,
+              dados_preenchidos: false,
+              observacoes: null
+            },
+            {
+              stage: 5,
+              nome: "Verificação de Identidade",
+              concluido: false,
+              data_conclusao: null,
+              dados_preenchidos: false,
+              observacoes: null
+            },
+            {
+              stage: 6,
+              nome: "Verificação de Email",
+              concluido: false,
+              data_conclusao: null,
+              dados_preenchidos: true,
+              observacoes: "Email cadastrado, aguardando verificação"
+            }
+          ],
+          created_at: "2025-11-05T10:30:00",
+          updated_at: "2025-11-05T12:00:00",
+          approved_at: null,
+          motivo_rejeicao: null,
+          resumo_dados: {
+            nome_completo: "João Silva Santos",
+            cpf: "123.XXX.XXX-01",
+            nickname: "@joaosilva",
+            categoria: "Fitness",
+            email_verificacao: "joao@email.com",
+            tem_capa: true,
+            tem_documentos: false,
+            planos_cadastrados: 0
+          }
+        },
+        {
+          id: 2,
+          user_id: 124,
+          status_geral: "Aguardando Análise ⏳",
+          progresso_percentage: 100,
+          stage_atual: 7,
+          stages: [
+            {
+              stage: 1,
+              nome: "Dados Pessoais",
+              concluido: true,
+              data_conclusao: "2025-11-04T09:30:00",
+              dados_preenchidos: true,
+              observacoes: null
+            },
+            {
+              stage: 2,
+              nome: "Perfil Criador",
+              concluido: true,
+              data_conclusao: "2025-11-04T10:15:00",
+              dados_preenchidos: true,
+              observacoes: null
+            },
+            {
+              stage: 3,
+              nome: "Capa e Biografia",
+              concluido: true,
+              data_conclusao: "2025-11-04T11:00:00",
+              dados_preenchidos: true,
+              observacoes: null
+            },
+            {
+              stage: 4,
+              nome: "Planos de Assinatura",
+              concluido: true,
+              data_conclusao: "2025-11-04T12:30:00",
+              dados_preenchidos: true,
+              observacoes: null
+            },
+            {
+              stage: 5,
+              nome: "Verificação de Identidade",
+              concluido: true,
+              data_conclusao: "2025-11-04T13:00:00",
+              dados_preenchidos: true,
+              observacoes: null
+            },
+            {
+              stage: 6,
+              nome: "Verificação de Email",
+              concluido: true,
+              data_conclusao: "2025-11-04T13:30:00",
+              dados_preenchidos: true,
+              observacoes: "Email verificado com sucesso"
+            }
+          ],
+          created_at: "2025-11-04T09:30:00",
+          updated_at: "2025-11-04T13:30:00",
+          approved_at: null,
+          motivo_rejeicao: null,
+          resumo_dados: {
+            nome_completo: "Maria Oliveira",
+            cpf: "456.XXX.XXX-02",
+            nickname: "@mariaoliveira",
+            categoria: "Lifestyle",
+            email_verificacao: "maria@email.com",
+            tem_capa: true,
+            tem_documentos: true,
+            planos_cadastrados: 3
+          }
+        },
+        {
+          id: 3,
+          user_id: 125,
+          status_geral: "Em Progresso (1/6) 🚀",
+          progresso_percentage: 16,
+          stage_atual: 2,
+          stages: [
+            {
+              stage: 1,
+              nome: "Dados Pessoais",
+              concluido: true,
+              data_conclusao: "2025-11-05T14:30:00",
+              dados_preenchidos: true,
+              observacoes: null
+            },
+            {
+              stage: 2,
+              nome: "Perfil Criador",
+              concluido: false,
+              data_conclusao: null,
+              dados_preenchidos: false,
+              observacoes: null
+            },
+            {
+              stage: 3,
+              nome: "Capa e Biografia",
+              concluido: false,
+              data_conclusao: null,
+              dados_preenchidos: false,
+              observacoes: null
+            },
+            {
+              stage: 4,
+              nome: "Planos de Assinatura",
+              concluido: false,
+              data_conclusao: null,
+              dados_preenchidos: false,
+              observacoes: null
+            },
+            {
+              stage: 5,
+              nome: "Verificação de Identidade",
+              concluido: false,
+              data_conclusao: null,
+              dados_preenchidos: false,
+              observacoes: null
+            },
+            {
+              stage: 6,
+              nome: "Verificação de Email",
+              concluido: false,
+              data_conclusao: null,
+              dados_preenchidos: false,
+              observacoes: null
+            }
+          ],
+          created_at: "2025-11-05T14:30:00",
+          updated_at: "2025-11-05T14:30:00",
+          approved_at: null,
+          motivo_rejeicao: null,
+          resumo_dados: {
+            nome_completo: "Pedro Santos",
+            cpf: "789.XXX.XXX-03",
+            nickname: "@pedrosantos",
+            categoria: "Gaming",
+            email_verificacao: "pedro@email.com",
+            tem_capa: false,
+            tem_documentos: false,
+            planos_cadastrados: 0
+          }
+        }
+      ] as CreatorUpgradeStatus[],
+      total: 3,
+      page: params?.page || 1,
+      per_page: params?.per_page || 50,
+      total_pages: 1
+    };
+
+    // Filtrar por status se especificado
+    if (params?.status_filter && params.status_filter !== "all") {
+      const filtered = mockData.upgrades.filter(upgrade => {
+        const status = upgrade.status_geral.toLowerCase();
+        switch (params.status_filter) {
+          case 'em_progresso':
+            return status.includes('progresso');
+          case 'aguardando_analise':
+            return status.includes('aguardando');
+          case 'em_analise':
+            return status.includes('análise') && !status.includes('aguardando');
+          case 'aprovado':
+            return status.includes('aprovado');
+          case 'rejeitado':
+            return status.includes('rejeitado');
+          default:
+            return true;
+        }
+      });
+      mockData.upgrades = filtered;
+      mockData.total = filtered.length;
+    }
+
+    // Simular delay de rede
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    console.log('📊 Status de upgrades (simulados):', mockData);
+    return mockData;
+  },
+};
+
 const api = {
   auth: authAPI,
   stats: statsAPI,
@@ -1240,6 +1735,7 @@ const api = {
   reports: reportsAPI,
   plans: plansAPI,
   system: systemAPI,
+  upgrades: upgradeAPI,
   utils: apiUtils,
 };
 

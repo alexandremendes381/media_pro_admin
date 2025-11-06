@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle, XCircle, Clock, Search, AlertTriangle, Eye, User, Users, MapPin, Phone, Calendar, X } from "lucide-react";
 import SimpleImage from "@/components/SimpleImage";
+import CreatorImage from "@/components/CreatorImage";
+import CreatorStepValidation from "@/components/CreatorStepValidation";
 import { userValidationAPI, authAPI, apiUtils } from "@/lib/api";
 import { PendingUser } from "@/types/api";
 import { useAuthContext } from "@/contexts/AuthContext";
@@ -49,6 +51,8 @@ export default function ValidarUsuariosPage() {
     documents: any[];
   } | null>(null);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [showStepValidation, setShowStepValidation] = useState(false);
+  const [selectedUserForSteps, setSelectedUserForSteps] = useState<PendingUser | null>(null);
 
   // Suporte ao ESC para fechar modais
   useEffect(() => {
@@ -244,9 +248,31 @@ export default function ValidarUsuariosPage() {
     setSelectedUserDocuments(null);
   };
 
+  // Abrir validação por passos
+  const openStepValidation = (user: PendingUser) => {
+    setSelectedUserForSteps(user);
+    setShowStepValidation(true);
+  };
+
+  // Fechar validação por passos
+  const closeStepValidation = () => {
+    setShowStepValidation(false);
+    setSelectedUserForSteps(null);
+  };
+
   // Se não autenticado, não mostrar nada (redirecionamento está acontecendo)
   if (!isAuthenticated) {
     return null;
+  }
+
+  // Se estiver na validação por passos, mostrar o componente específico
+  if (showStepValidation && selectedUserForSteps) {
+    return (
+      <CreatorStepValidation 
+        user={selectedUserForSteps}
+        onBack={closeStepValidation}
+      />
+    );
   }
 
   if (usersLoading || authLoading || statsLoading) {
@@ -461,7 +487,7 @@ export default function ValidarUsuariosPage() {
       {/* Lista de Usuários */}
       <div className="space-y-4">
         {users.map((user) => (
-          <Card key={user.id}>
+          <Card key={user.request_id || user.id}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
@@ -469,81 +495,210 @@ export default function ValidarUsuariosPage() {
                   <div className="flex items-center justify-center w-12 h-12 bg-blue-100 text-blue-600 rounded-full">
                     <User className="w-6 h-6" />
                   </div>
-                  
                   <div className="space-y-1 flex-1">
                     <CardTitle className="flex items-center gap-2 text-lg">
-                      {user.nome_completo || user.nome_artistico || user.email || `Usuário ${user.id}`}
-                      {user.nome_artistico && user.nome_completo !== user.nome_artistico && (
+                      {user.nome_completo || user.user_nome || user.user_nickname || user.user_email || `Usuário ${user.request_id || user.id}`}
+                      {user.user_nickname && (
                         <span className="text-sm text-muted-foreground font-normal">
-                          @{user.nome_artistico}
+                          @{user.user_nickname}
                         </span>
                       )}
                     </CardTitle>
                     <CardDescription>
-                      {user.email} • Criado em {apiUtils.formatDate(user.created_at)}
+                      {user.user_email} • Criado em {apiUtils.formatDate(user.created_at)}
                     </CardDescription>
                   </div>
                 </div>
-                
                 <div className="flex flex-col items-end gap-2">
-                  <StatusBadge status={user.status_da_conta || user.status} />
-                  {(() => {
-                    const docCount = [user.documento_frente, user.documento_verso, user.selfie_documento].filter(Boolean).length;
-                    const legacyCount = user.documentos?.length || 0;
-                    const totalDocs = Math.max(docCount, legacyCount);
-                    
-                    return totalDocs > 0 && (
-                      <Badge variant="outline">
-                        {totalDocs} documento{totalDocs !== 1 ? 's' : ''}
-                      </Badge>
-                    );
-                  })()}
+                  <StatusBadge status={
+                    user.upgrade_status === 'pendente' ? 'em_analise' :
+                    user.upgrade_status === 'aprovado' ? 'aprovado' :
+                    user.upgrade_status === 'rejeitado' ? 'reprovado' :
+                    user.status_da_conta || user.status || 'em_analise'
+                  } />
+                  {user.cpf && (
+                    <Badge variant="outline">CPF: {user.cpf}</Badge>
+                  )}
                 </div>
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <span className="font-medium">Telefone:</span>
-                      <p className="text-muted-foreground">{user.telefone}</p>
+                  <div className="flex flex-col gap-2">
+                    <span className="font-medium">Imagens do Creator:</span>
+                    <div className="flex gap-2 flex-wrap">
+                      {/* Foto de perfil */}
+                      {user.image_perfil_tipo && user.request_id && (
+                        <CreatorImage
+                          requestId={user.request_id}
+                          imageType="image_perfil"
+                          alt="Foto de perfil"
+                          label="Perfil"
+                          className="w-20 h-20 object-cover rounded border"
+                          style={{ 
+                            background: '#eee',
+                            minWidth: '80px',
+                            minHeight: '80px'
+                          }}
+                        />
+                      )}
+                      {/* Foto de capa */}
+                      {user.image_capa_tipo && user.request_id && (
+                        <CreatorImage
+                          requestId={user.request_id}
+                          imageType="image_capa"
+                          alt="Foto de capa"
+                          label="Capa"
+                          className="w-20 h-20 object-cover rounded border"
+                          style={{ 
+                            background: '#eee',
+                            minWidth: '80px',
+                            minHeight: '80px'
+                          }}
+                        />
+                      )}
+                      {/* Foto do documento */}
+                      {user.foto_documento_tipo && user.request_id && (
+                        <CreatorImage
+                          requestId={user.request_id}
+                          imageType="foto_documento"
+                          alt="Foto do documento"
+                          label="Documento"
+                          className="w-20 h-20 object-cover rounded border"
+                          style={{ 
+                            background: '#eee',
+                            minWidth: '80px',
+                            minHeight: '80px'
+                          }}
+                        />
+                      )}
+                      {/* Selfie com documento */}
+                      {user.selfie_rosto_tipo && user.request_id && (
+                        <CreatorImage
+                          requestId={user.request_id}
+                          imageType="selfie_rosto"
+                          alt="Selfie com documento"
+                          label="Selfie"
+                          className="w-20 h-20 object-cover rounded border"
+                          style={{ 
+                            background: '#eee',
+                            minWidth: '80px',
+                            minHeight: '80px'
+                          }}
+                        />
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <span className="font-medium">Localização:</span>
-                      <p className="text-muted-foreground">{user.cidade}/{user.estado}</p>
+                  {/* Dados principais */}
+                  {user.user_type && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">Tipo:</span>
+                        <p className="text-muted-foreground">{user.user_type}</p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <span className="font-medium">CEP:</span>
-                      <p className="text-muted-foreground">{user.cep}</p>
+                  )}
+                  {user.data_nascimento && (
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">Nascimento:</span>
+                        <p className="text-muted-foreground">{user.data_nascimento}</p>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  {user.pais && (
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">País:</span>
+                        <p className="text-muted-foreground">{user.pais}</p>
+                      </div>
+                    </div>
+                  )}
+                  {user.nome_perfil && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">Perfil:</span>
+                        <p className="text-muted-foreground">{user.nome_perfil}</p>
+                      </div>
+                    </div>
+                  )}
+                  {user.mediapro_username && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">Username:</span>
+                        <p className="text-muted-foreground">{user.mediapro_username}</p>
+                      </div>
+                    </div>
+                  )}
+                  {user.biografia && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">Biografia:</span>
+                        <p className="text-muted-foreground">{user.biografia}</p>
+                      </div>
+                    </div>
+                  )}
+                  {user.email_verificacao && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">Email verificação:</span>
+                        <p className="text-muted-foreground">{user.email_verificacao}</p>
+                      </div>
+                    </div>
+                  )}
+                  {typeof user.email_verificado === 'boolean' && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">Email verificado:</span>
+                        <p className="text-muted-foreground">{user.email_verificado ? 'Sim' : 'Não'}</p>
+                      </div>
+                    </div>
+                  )}
+                  {(user.plano_mensal_ativo || user.plano_trimestral_ativo || user.plano_semestral_ativo) && (
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <span className="font-medium">Planos:</span>
+                        <p className="text-muted-foreground">
+                          {user.plano_mensal_ativo && user.plano_mensal_valor && (
+                            <>Mensal: R$ {user.plano_mensal_valor}<br /></>
+                          )}
+                          {user.plano_trimestral_ativo && user.plano_trimestral_valor && (
+                            <>Trimestral: R$ {user.plano_trimestral_valor}<br /></>
+                          )}
+                          {user.plano_semestral_ativo && user.plano_semestral_valor && (
+                            <>Semestral: R$ {user.plano_semestral_valor}</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {selectedUser === user.id && (
+                {selectedUser === (user.request_id || user.id) && (
                   <div className="pt-4 border-t">
                     <div className="space-y-3">
-                      <div>
-                        <span className="font-medium">Endereço Completo:</span>
-                        <p className="text-muted-foreground text-sm">{user.endereco}, {user.cidade}/{user.estado} - {user.cep}, {user.pais}</p>
-                      </div>
-                      {user.data_aprovacao && (
-                        <div>
-                          <span className="font-medium">Data de Aprovação:</span>
-                          <p className="text-muted-foreground text-sm">{apiUtils.formatDate(user.data_aprovacao)}</p>
-                        </div>
-                      )}
-                      {user.motivo_reprovacao && (
+                      {(user.motivo_rejeicao || user.motivo_reprovacao) && (
                         <div>
                           <span className="font-medium">Motivo da Reprovação:</span>
-                          <p className="text-muted-foreground text-sm bg-red-50 p-2 rounded">{user.motivo_reprovacao}</p>
+                          <p className="text-muted-foreground text-sm bg-red-50 p-2 rounded">
+                            {user.motivo_rejeicao || user.motivo_reprovacao}
+                          </p>
+                        </div>
+                      )}
+                      {user.approved_at && (
+                        <div>
+                          <span className="font-medium">Data de Aprovação:</span>
+                          <p className="text-muted-foreground text-sm">{apiUtils.formatDate(user.approved_at)}</p>
                         </div>
                       )}
                     </div>
@@ -551,16 +706,29 @@ export default function ValidarUsuariosPage() {
                 )}
 
                 <div className="flex gap-2 pt-2 border-t flex-wrap">
+                  {/* Novo botão principal: Validação por Passos */}
+                  {user.request_id && (
+                    <Button 
+                      size="sm" 
+                      onClick={() => openStepValidation(user)}
+                      className="bg-blue-600 hover:bg-blue-700"
+                    >
+                      <CheckCircle className="h-4 w-4 mr-1" />
+                      Validar por Passos
+                    </Button>
+                  )}
+
                   {(user.status_da_conta || user.status) === 'em_analise' && (
                     <>
                       <Button 
                         size="sm" 
                         onClick={() => handleApproveUser(user.id)}
                         disabled={approveMutation.isPending}
-                        className="bg-green-600 hover:bg-green-700"
+                        variant="outline"
+                        className="border-green-600 text-green-600 hover:bg-green-50"
                       >
                         <CheckCircle className="h-4 w-4 mr-1" />
-                        Aprovar
+                        Aprovar Tudo
                       </Button>
                       <Button 
                         size="sm" 
@@ -569,7 +737,7 @@ export default function ValidarUsuariosPage() {
                         disabled={approveMutation.isPending}
                       >
                         <XCircle className="h-4 w-4 mr-1" />
-                        Reprovar
+                        Reprovar Tudo
                       </Button>
                     </>
                   )}

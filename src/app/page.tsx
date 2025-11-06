@@ -56,15 +56,20 @@ export default function Home() {
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">
-          Bem-vindo, {admin?.nome || 'Administrador'}!
-        </h1>
-        <p className="text-muted-foreground">
-          Visão geral das validações pendentes e estatísticas do painel administrativo
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/10">
+      <div className="p-6 space-y-8">
+        {/* Header com gradiente */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent p-6 border">
+          <div className="relative z-10">
+            <h1 className="text-4xl font-bold tracking-tight mb-2">
+              Bem-vindo, {admin?.nome || 'Administrador'}! 👋
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl">
+              Visão geral das validações pendentes e estatísticas do painel administrativo MediaPro
+            </p>
+          </div>
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-primary/20 to-transparent rounded-full -translate-y-16 translate-x-16" />
+        </div>
 
       {/* Alertas */}
       {stats?.alertas && stats.alertas > 0 && (
@@ -83,78 +88,89 @@ export default function Home() {
         </Card>
       )}
 
-      {/* Cards de estatísticas principais */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Logins Pendentes
-            </CardTitle>
-            <UserCheck className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.loginsPendentes || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              de {stats?.loginsTotais || 0} tentativas totais
-            </p>
-          </CardContent>
-        </Card>
+        {/* Cards de estatísticas principais */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <Card className="hover:shadow-lg transition-shadow duration-200 border-0 bg-card/50 backdrop-blur">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Logins Pendentes
+              </CardTitle>
+              <div className="p-2 bg-blue-500/10 rounded-lg">
+                <UserCheck className="h-4 w-4 text-blue-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-blue-600 dark:text-blue-400">{stats?.loginsPendentes || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                de {stats?.loginsTotais || 0} tentativas totais
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Leilões Pendentes
-            </CardTitle>
-            <Gavel className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats?.leiloesPendentes || 0}</div>
-            <p className="text-xs text-muted-foreground">
-              de {stats?.leiloesTotais || 0} leilões totais
-            </p>
-          </CardContent>
-        </Card>
+          <Card className="hover:shadow-lg transition-shadow duration-200 border-0 bg-card/50 backdrop-blur">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Leilões Pendentes
+              </CardTitle>
+              <div className="p-2 bg-amber-500/10 rounded-lg">
+                <Gavel className="h-4 w-4 text-amber-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-amber-600 dark:text-amber-400">{stats?.leiloesPendentes || 0}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                de {stats?.leiloesTotais || 0} leilões totais
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Taxa de Aprovação
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">87%</div>
-            <p className="text-xs text-muted-foreground">
-              últimos 30 dias
-            </p>
-          </CardContent>
-        </Card>
+          <Card className="hover:shadow-lg transition-shadow duration-200 border-0 bg-card/50 backdrop-blur">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Taxa de Aprovação
+              </CardTitle>
+              <div className="p-2 bg-green-500/10 rounded-lg">
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-green-600 dark:text-green-400">87%</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                últimos 30 dias
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Tempo Médio
-            </CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">2.4h</div>
-            <p className="text-xs text-muted-foreground">
-              para validação
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+          <Card className="hover:shadow-lg transition-shadow duration-200 border-0 bg-card/50 backdrop-blur">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">
+                Tempo Médio
+              </CardTitle>
+              <div className="p-2 bg-purple-500/10 rounded-lg">
+                <Clock className="h-4 w-4 text-purple-500" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold text-purple-600 dark:text-purple-400">2.4h</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                para validação
+              </p>
+            </CardContent>
+          </Card>
+        </div>
 
-      {/* Atividades recentes */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Validações Recentes - Login</CardTitle>
-            <CardDescription>
-              Últimas tentativas de login processadas
-            </CardDescription>
-          </CardHeader>
+        {/* Atividades recentes */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Card className="hover:shadow-lg transition-shadow duration-200 border-0 bg-card/50 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCheck className="h-5 w-5 text-blue-500" />
+                Validações Recentes - Login
+              </CardTitle>
+              <CardDescription>
+                Últimas tentativas de login processadas
+              </CardDescription>
+            </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
@@ -187,15 +203,18 @@ export default function Home() {
               </Badge>
             </div>
           </CardContent>
-        </Card>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Leilões em Análise</CardTitle>
-            <CardDescription>
-              Leilões aguardando aprovação
-            </CardDescription>
-          </CardHeader>
+          <Card className="hover:shadow-lg transition-shadow duration-200 border-0 bg-card/50 backdrop-blur">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Gavel className="h-5 w-5 text-amber-500" />
+                Leilões em Análise
+              </CardTitle>
+              <CardDescription>
+                Leilões aguardando aprovação
+              </CardDescription>
+            </CardHeader>
           <CardContent className="space-y-3">
             <div className="flex items-center justify-between">
               <div>
@@ -228,7 +247,8 @@ export default function Home() {
               </Badge>
             </div>
           </CardContent>
-        </Card>
+          </Card>
+        </div>
       </div>
     </div>
   );
