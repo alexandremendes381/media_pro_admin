@@ -34,29 +34,76 @@ export interface LoginValidationRequest {
 }
 
 export interface PendingUser {
+  // IDs e identificadores
   id: number;
-  nome_completo?: string; // Opcional para casos de dados incompletos
-  nome_artistico?: string; // Opcional para casos de dados incompletos
-  email: string; // Mantido obrigatório pois é sempre presente
+  request_id?: number;
+  user_id?: number;
+  
+  // Dados do usuário
+  nome_completo?: string;
+  nome_artistico?: string;
+  email: string;
+  user_email?: string;
+  user_nickname?: string;
+  user_nome?: string;
+  user_type?: string;
+  
+  // Status e controle
+  status?: 'em_analise' | 'aprovado' | 'reprovado'; // Campo antigo (opcional)
+  status_da_conta?: 'em_analise' | 'aprovado' | 'reprovado'; // Campo novo da API
+  upgrade_status?: 'pendente' | 'aprovado' | 'rejeitado' | 'em_analise';
+  is_verified?: boolean;
+  is_active?: boolean;
+  motivo_reprovacao?: string;
+  motivo_rejeicao?: string;
+  data_aprovacao?: string;
+  approved_at?: string;
+  aprovado_por?: number;
+  
+  // Dados pessoais do creator
+  cpf?: string;
+  data_nascimento?: string;
   telefone?: string;
   cep?: string;
   endereco?: string;
   cidade?: string;
   estado?: string;
   pais?: string;
-  status?: 'em_analise' | 'aprovado' | 'reprovado'; // Campo antigo (opcional)
-  status_da_conta?: 'em_analise' | 'aprovado' | 'reprovado'; // Campo novo da API
-  is_verified?: boolean; // Campo da nova API
-  is_active?: boolean; // Campo da nova API
-  motivo_reprovacao?: string;
-  data_aprovacao?: string;
+  
+  // Perfil do creator
+  nome_perfil?: string;
+  mediapro_username?: string;
+  biografia?: string;
+  
+  // Planos e valores
+  plano_mensal_ativo?: boolean;
+  plano_mensal_valor?: number;
+  plano_trimestral_ativo?: boolean;
+  plano_trimestral_valor?: number;
+  plano_semestral_ativo?: boolean;
+  plano_semestral_valor?: number;
+  
+  // Verificação de email
+  email_verificacao?: string;
+  email_verificado?: boolean;
+  codigo_verificacao?: string;
+  codigo_expira_em?: string;
+  
+  // Tipos de imagens (apenas tipo, não dados)
+  image_perfil_tipo?: string;
+  image_capa_tipo?: string;
+  foto_documento_tipo?: string;
+  selfie_rosto_tipo?: string;
+  
+  // Datas
   created_at: string;
   updated_at?: string;
-  aprovado_por?: number;
-  // Imagens dos documentos em base64
+  
+  // Imagens dos documentos em base64 (compatibilidade)
   documento_frente?: string;
   documento_verso?: string;
   selfie_documento?: string;
+  
   // Para compatibilidade com versão anterior
   documentos?: UserDocument[];
 }
@@ -75,6 +122,51 @@ export interface UserDocument {
   // Campos alternativos para compatibilidade
   nome_imagem?: string;
   tamanho_imagem?: number; // Compatibilidade
+}
+
+// Tipos para validação por passos
+export interface CreatorStep {
+  step: number;
+  nome: string;
+  completo: boolean;
+  status_validacao: 'aguardando' | 'aprovado' | 'reprovado';
+  dados: any;
+}
+
+export interface CreatorStepsResponse {
+  request_id: number;
+  user_id: number;
+  user_email: string;
+  user_nickname: string;
+  status_geral: 'em_analise' | 'aprovado' | 'rejeitado';
+  progresso_percentage: number;
+  passos_completos: number;
+  total_passos: number;
+  passos: CreatorStep[];
+  timestamps: {
+    created_at: string;
+    updated_at: string;
+    approved_at: string | null;
+  };
+}
+
+export interface StepValidationRequest {
+  aprovado: boolean;
+  observacoes?: string;
+  motivo_rejeicao?: string;
+}
+
+export interface StepValidationResponse {
+  message: string;
+  request_id: number;
+  step_number: number;
+  step_name: string;
+  aprovado: boolean;
+  observacoes: string | null;
+  motivo_rejeicao: string | null;
+  status_geral: 'em_analise' | 'aprovado' | 'rejeitado';
+  validated_by_admin: string;
+  validated_at: string;
 }
 
 export interface CreatorPost {
@@ -192,6 +284,7 @@ export interface Auction {
   titulo: string;
   descricao: string;
   preco_inicial: number;
+  lance_minimo: number;
   duracao_do_leilao: number;
   data_prevista: string;
   status: 'em_analise' | 'aprovado' | 'rejeitado';
@@ -213,4 +306,185 @@ export interface AuctionStats {
   aprovados: number;
   rejeitados: number;
   valor_total_inicial: number;
+}
+
+// === TIPOS PARA UPGRADE/PERFIL ===
+
+export interface UserProfile {
+  id: number;
+  user_id: number;
+  image_perfil?: string;
+  nome_perfil: string;
+  mediaPro_username: string;
+  email: string;
+  status: 'pendente' | 'aprovado' | 'rejeitado';
+  created_at: string;
+  updated_at: string;
+  approved_by?: number;
+  rejection_reason?: string;
+}
+
+export interface UpgradeRequest {
+  id: number;
+  user_id: number;
+  profile_data: {
+    image_perfil?: string;
+    nome_perfil: string;
+    mediaPro_username: string;
+  };
+  user_email: string;
+  user_nome_completo: string;
+  status: 'pendente' | 'aprovado' | 'rejeitado';
+  requested_at: string;
+  processed_at?: string;
+  processed_by?: number;
+  rejection_reason?: string;
+}
+
+export interface UpgradeApprovalRequest {
+  upgrade_id: number;
+  approved: boolean;
+  rejection_reason?: string;
+}
+
+export interface UpgradeApprovalResponse {
+  success: boolean;
+  message: string;
+  upgrade: UpgradeRequest;
+}
+
+export interface UpgradeStats {
+  total_requests: number;
+  pendentes: number;
+  aprovados: number;
+  rejeitados: number;
+}
+
+// === TIPOS PARA CREATORS ===
+
+export interface Creator {
+  id: number;
+  nome_completo: string;
+  nome_artistico: string;
+  email: string;
+  telefone: string;
+  cidade: string;
+  estado: string;
+  status_da_conta: 'em_analise' | 'aprovado' | 'reprovado';
+  is_verified: boolean;
+  is_active: boolean;
+  created_at: string;
+  documento_frente?: string;
+  documento_verso?: string;
+  selfie_documento?: string;
+}
+
+export interface CreatorStatusUpdate {
+  status: 'em_analise' | 'aprovado' | 'reprovado';
+  motivo?: string;
+}
+
+// === TIPOS PARA UPGRADE/CREATOR REQUESTS ===
+
+export interface CreatorUpgradeRequest {
+  id: number;
+  user_id: number;
+  user_email: string;
+  user_nickname: string;
+  nome_completo: string;
+  cpf: string;
+  data_nascimento: string;
+  pais: string;
+  nickname: string;
+  categoria: string;
+  email_verificacao: string;
+  status: 'pendente' | 'em_analise' | 'aprovado' | 'rejeitado' | 'cancelado';
+  progresso_percentage: number;
+  stages_concluidos: number;
+  perfil_configurado: boolean;
+  capa_configurada: boolean;
+  planos_configurados: boolean;
+  documentos_enviados: boolean;
+  email_verificado: boolean;
+  motivo_rejeicao?: string | null;
+  created_at: string;
+  updated_at: string;
+  approved_at?: string | null;
+}
+
+export interface UpgradeStageData {
+  stage: number;
+  nome: string;
+  concluido: boolean;
+  dados: any; // Dados específicos de cada stage
+}
+
+export interface CreatorUpgradeRequestDetails {
+  id: number;
+  user_id: number;
+  user_data: {
+    email: string;
+    nickname: string;
+    user_type: string;
+    created_at: string;
+  };
+  status: 'pendente' | 'em_analise' | 'aprovado' | 'rejeitado' | 'cancelado';
+  motivo_rejeicao?: string | null;
+  stages: UpgradeStageData[];
+  documentos: {
+    foto_documento_base64?: string;
+    foto_documento_tipo?: string;
+    selfie_rosto_base64?: string;
+    selfie_rosto_tipo?: string;
+    capa_base64?: string;
+    capa_tipo?: string;
+  };
+  timestamps: {
+    created_at: string;
+    updated_at: string;
+    approved_at?: string | null;
+    email_verificado_em?: string | null;
+  };
+}
+
+export interface CreatorUpgradeRequestsResponse {
+  requests: CreatorUpgradeRequest[];
+  total_count: number;
+  page_info: {
+    skip: number;
+    limit: number;
+    has_next: boolean;
+    has_previous: boolean;
+  };
+}
+
+export interface UpgradeStatusUpdate {
+  status: 'aprovado' | 'rejeitado';
+  observacoes?: string;
+  motivo_rejeicao?: string;
+}
+
+export interface CreatorStats {
+  creators_totais: number;
+  creators_ativos: number;
+  creators_verificados: number;
+  por_status: {
+    em_analise: number;
+    aprovado: number;
+    reprovado: number;
+  };
+  solicitacoes_upgrade: {
+    pendentes: number;
+    em_analise: number;
+    aprovadas_mes: number;
+    rejeitadas_mes: number;
+  };
+  crescimento_mensal: {
+    novos_creators: number;
+    percentual_crescimento: number;
+  };
+  top_estados: Array<{
+    estado: string;
+    total: number;
+  }>;
 }

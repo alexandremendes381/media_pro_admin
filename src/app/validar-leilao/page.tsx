@@ -177,7 +177,27 @@ export default function ValidarLeilaoPage() {
   };
 
   const formatDate = (timestamp: string) => {
-    return new Date(timestamp).toLocaleString('pt-BR');
+    return new Date(timestamp).toLocaleString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const formatDuration = (minutes: number) => {
+    if (minutes < 60) {
+      return `${minutes} minutos`;
+    } else if (minutes < 1440) {
+      const hours = Math.floor(minutes / 60);
+      const remainingMinutes = minutes % 60;
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}min` : `${hours} horas`;
+    } else {
+      const days = Math.floor(minutes / 1440);
+      const remainingHours = Math.floor((minutes % 1440) / 60);
+      return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days} dias`;
+    }
   };
 
   const formatCurrency = (value: number) => {
@@ -244,7 +264,7 @@ export default function ValidarLeilaoPage() {
                         {formatDate(auction.data_prevista)}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Duração: {auction.duracao_do_leilao} dias
+                        Duração: {formatDuration(auction.duracao_do_leilao)}
                       </p>
                     </div>
                   </div>
@@ -270,9 +290,12 @@ export default function ValidarLeilaoPage() {
                   </div>
 
                   <div>
-                    <p className="text-xs font-medium">Preço Inicial</p>
+                    <p className="text-xs font-medium">Preços</p>
                     <p className="text-sm font-semibold text-primary">
-                      {formatCurrency(auction.preco_inicial)}
+                      Inicial: {formatCurrency(auction.preco_inicial)}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Lance mín: {formatCurrency(auction.lance_minimo)}
                     </p>
                   </div>
                 </div>
@@ -364,6 +387,14 @@ export default function ValidarLeilaoPage() {
                       <div>
                         <span className="font-medium">Tipo de Ensaio:</span>
                         <p className="text-muted-foreground">{auction.tipo_de_ensaio}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Preço Inicial:</span>
+                        <p className="text-muted-foreground">{formatCurrency(auction.preco_inicial)}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium">Lance Mínimo:</span>
+                        <p className="text-muted-foreground text-green-600 font-semibold">{formatCurrency(auction.lance_minimo)}</p>
                       </div>
                     </div>
 
