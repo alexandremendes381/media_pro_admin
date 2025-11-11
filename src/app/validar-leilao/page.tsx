@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Clock, Search, Eye, Calendar, Users } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Search, Eye, Calendar, Users, AlertCircle } from "lucide-react";
 import api from "@/lib/api";
 import { Auction } from "@/types/api";
 import { toast } from "sonner";
@@ -115,7 +115,15 @@ const mapStatus = (status: string) => {
     'aprovado': 'aprovado',
     'rejeitado': 'rejeitado'
   };
-  return statusMap[status] || status;
+  
+  const mappedStatus = statusMap[status] || status;
+  
+  // Log para debug se necessário
+  if (!statusMap[status]) {
+    console.warn(`Status desconhecido recebido: ${status}, usando valor original`);
+  }
+  
+  return mappedStatus;
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -126,7 +134,13 @@ function StatusBadge({ status }: { status: string }) {
     rejeitado: { variant: "destructive" as const, icon: XCircle, color: "text-red-600" },
   };
 
-  const config = variants[mappedStatus as keyof typeof variants];
+  // Fallback para status desconhecidos
+  const config = variants[mappedStatus as keyof typeof variants] || {
+    variant: "outline" as const,
+    icon: AlertCircle,
+    color: "text-gray-600"
+  };
+  
   const Icon = config.icon;
 
   return (
