@@ -488,3 +488,85 @@ export interface CreatorStats {
     total: number;
   }>;
 }
+
+// === TIPOS PARA TRANSFERIR MEDIACOINS ===
+
+export interface ExpiredAuction {
+  auction_id: number;
+  titulo: string;
+  descricao: string;
+  tipo_de_ensaio: string;
+  created_at: string;
+  data_prevista: string;
+  data_termino: string;
+  expired_hours_ago: number;
+  status: 'expirado';
+  can_be_finalized: boolean;
+  requires_manual_action: boolean;
+  has_winner: boolean;
+  creator: {
+    creator_id: number;
+    creator_name: string;
+    creator_nome_completo: string;
+    creator_email: string;
+    creator_status: string;
+    creator_verified: boolean;
+  };
+  creator_balance: {
+    current_balance: number;
+    balance_after_receiving: number;
+  };
+  financial: {
+    initial_price: number;
+    minimum_bid: number;
+    highest_bid: number | null;
+    winning_bid: number | null;
+    total_bids: number;
+    needs_transfer: number | null;
+  };
+  media_info: {
+    total_images: number;
+    total_videos: number;
+  };
+  winner: {
+    user_id: number;
+    user_name: string;
+    bid_value: number;
+    bid_created_at: string;
+  } | null;
+  winner_balance: {
+    current_balance: number;
+    balance_after_payment: number;
+  } | null;
+  requested_by: string;
+  timestamp: string;
+}
+
+export interface ExpiredAuctionsResponse {
+  auctions: ExpiredAuction[];
+  summary: {
+    total_with_winner: number;
+    total_without_winner: number;
+    total_value_to_transfer: number;
+  };
+  total_expired_auctions: number;
+}
+
+export interface FinalizeAuctionRequest {
+  observacoes?: string;
+}
+
+export interface FinalizeAuctionResponse {
+  id: number;
+  titulo: string;
+  status: 'finalizado';
+  mediacoins_transferidos: number;
+  vencedor: {
+    id: number;
+    nickname: string;
+    email: string;
+  };
+  midia_liberada: boolean;
+  data_finalizacao: string;
+  observacoes?: string;
+}

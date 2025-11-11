@@ -17,12 +17,13 @@ import {
   UpgradeApprovalRequest,
   UpgradeApprovalResponse,
   UpgradeStats,
-  CreatorUpgradeStatus,
-  UpgradeStage,
-  UpgradeResumo,
   CreatorStepsResponse,
   StepValidationRequest,
-  StepValidationResponse
+  StepValidationResponse,
+  ExpiredAuction,
+  ExpiredAuctionsResponse,
+  FinalizeAuctionRequest,
+  FinalizeAuctionResponse
 } from '@/types/api';
 
 // Base URL da API
@@ -1099,6 +1100,59 @@ export const auctionsAPI = {
       rejeitados,
       valor_total_inicial
     };
+  },
+
+  // === FUNCIONALIDADES PARA TRANSFERIR MEDIACOINS ===
+  
+  // Listar leilões expirados
+  getExpiredAuctions: async (params?: {
+    page?: number;
+    per_page?: number;
+  }): Promise<ExpiredAuctionsResponse> => {
+    const queryParams = new URLSearchParams();
+    
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.per_page) queryParams.append('per_page', params.per_page.toString());
+
+    const query = queryParams.toString();
+    const url = `${API_BASE_URL}/api/v1/admin/auctions/expired${query ? `?${query}` : ''}`;
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: getHeaders(true),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log('⏰ Leilões expirados recebidos:', data);
+    return data;
+  },
+
+  // Finalizar leilão manualmente (transferir MediaCoins + liberar mídia)
+  finalizeAuctionManually: async (
+    auctionId: number, 
+    request?: FinalizeAuctionRequest
+  ): Promise<FinalizeAuctionResponse> => {
+    const url = `${API_BASE_URL}/api/v1/admin/auctions/${auctionId}/finalize`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify(request || {}),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log(`✅ Leilão ${auctionId} finalizado manualmente:`, data);
+    return data;
   }
 };
 
@@ -1735,7 +1789,6 @@ const api = {
   reports: reportsAPI,
   plans: plansAPI,
   system: systemAPI,
-  upgrades: upgradeAPI,
   utils: apiUtils,
 };
 

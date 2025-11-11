@@ -15,7 +15,7 @@ import {
   User,
   Shield,
   FileText,
-  UserPlus
+  Coins
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { useState } from "react";
@@ -43,9 +43,9 @@ const sidebarItems = [
     icon: Gavel,
   },
   {
-    title: "Validar Upgrade",
-    href: "/validar-upgrade",
-    icon: UserPlus,
+    title: "Transferir MediaCoins",
+    href: "/transferir-mediacoins",
+    icon: Coins,
   },
   {
     title: "Gerenciar Creators",
