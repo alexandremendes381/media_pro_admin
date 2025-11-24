@@ -300,6 +300,25 @@ export interface AuctionStatusUpdate {
   status: 'aprovado' | 'rejeitado';
 }
 
+export interface CreateAuctionRequest {
+  creator_id: number;
+  tipo_de_ensaio: string;
+  titulo: string;
+  descricao: string;
+  preco_inicial: number;
+  lance_minimo: number;
+  duracao_do_leilao: number; // em horas
+  data_prevista: string; // ISO string
+  images?: File[];
+  videos?: File[];
+}
+
+export interface CreateAuctionResponse {
+  success: boolean;
+  message: string;
+  auction: Auction;
+}
+
 export interface AuctionStats {
   total_leiloes: number;
   em_analise: number;
@@ -557,16 +576,77 @@ export interface FinalizeAuctionRequest {
 }
 
 export interface FinalizeAuctionResponse {
-  id: number;
-  titulo: string;
-  status: 'finalizado';
-  mediacoins_transferidos: number;
-  vencedor: {
+  success: boolean;
+  message: string;
+  auction_id: number;
+  status: 'finalizado' | 'finalizado_sem_lances';
+  
+  // Winner info (null se não houve lances)
+  winner?: {
+    user_id: number;
+    user_name: string;
+    bid_value: number;
+  } | null;
+  
+  // Creator info sempre presente
+  creator: {
+    creator_id: number;
+    creator_name?: string;
+    balance_before?: number;
+    balance_after?: number;
+    received: number; // 0 se não houve transferência
+  };
+  
+  // Transaction info (apenas se houve transferência)
+  transactions?: {
+    user_transaction_id: number;
+    creator_transaction_id: number;
+  };
+  
+  finalized_by: string;
+  finalized_at: string;
+
+  // Campos da interface antiga (para compatibilidade)
+  id?: number;
+  titulo?: string;
+  mediacoins_transferidos?: number;
+  vencedor?: {
     id: number;
     nickname: string;
     email: string;
   };
-  midia_liberada: boolean;
-  data_finalizacao: string;
+  midia_liberada?: boolean;
+  data_finalizacao?: string;
   observacoes?: string;
+}
+
+// Interface para status detalhado de upgrade de creator (com stages)
+export interface CreatorUpgradeStatus {
+  id: number;
+  user_id: number;
+  status_geral: string;
+  progresso_percentage: number;
+  stage_atual: number;
+  stages: Array<{
+    stage: number;
+    nome: string;
+    concluido: boolean;
+    data_conclusao: string | null;
+    dados_preenchidos: boolean;
+    observacoes: string | null;
+  }>;
+  created_at: string;
+  updated_at: string;
+  approved_at: string | null;
+  motivo_rejeicao: string | null;
+  resumo_dados: {
+    nome_completo: string;
+    cpf: string;
+    nickname: string;
+    categoria: string;
+    email_verificacao: string;
+    tem_capa: boolean;
+    tem_documentos: boolean;
+    planos_cadastrados: number;
+  };
 }

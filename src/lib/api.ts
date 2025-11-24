@@ -13,6 +13,8 @@ import {
   Auction,
   AuctionStatusUpdate,
   AuctionStats,
+  CreateAuctionRequest,
+  CreateAuctionResponse,
   UpgradeRequest,
   UpgradeApprovalRequest,
   UpgradeApprovalResponse,
@@ -23,11 +25,12 @@ import {
   ExpiredAuction,
   ExpiredAuctionsResponse,
   FinalizeAuctionRequest,
-  FinalizeAuctionResponse
+  FinalizeAuctionResponse,
+  CreatorUpgradeStatus
 } from '@/types/api';
 
 // Base URL da API
-const API_BASE_URL = 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
 
 // Função para obter o token do localStorage
 const getAuthToken = (): string | null => {
@@ -131,7 +134,6 @@ export const authAPI = {
   // Adapter para AdminStats (calculado localmente)
   getStats: async (): Promise<AdminStats> => {
     // Calcular estatísticas a partir dos creators
-    console.log('📊 Calculando estatísticas a partir dos creators...');
     const creators = await userValidationAPI.getAllUsers({ per_page: 1000 });
     
     const em_analise = creators.users.filter(u => u.status_da_conta === 'em_analise').length;
@@ -776,6 +778,85 @@ export const apiUtils = {
       return { level: 'critical', label: 'Crítico', color: 'red' };
     }
   },
+
+  // Criar leilões de teste para demonstração
+  createTestAuctions: async (): Promise<{
+    success: boolean;
+    message: string;
+    auctions: Auction[];
+  }> => {
+    const now = new Date();
+    
+    const testAuctions: CreateAuctionRequest[] = [
+      {
+        creator_id: 1, // Assumindo que existe um creator com ID 1
+        tipo_de_ensaio: "Fotografia",
+        titulo: "Ensaio Artístico em Estúdio - Conceito Minimalista",
+        descricao: "Ensaio fotográfico profissional em estúdio com conceito minimalista. Inclui 20 fotos editadas em alta resolução, 2 horas de sessão e direção artística especializada.",
+        preco_inicial: 25000, // R$ 250,00 em centavos
+        lance_minimo: 5000,   // R$ 50,00 em centavos
+        duracao_do_leilao: 24, // 24 horas
+        data_prevista: new Date(now.getTime() + 5 * 60 * 1000).toISOString(), // Inicia em 5 minutos
+      },
+      {
+        creator_id: 2,
+        tipo_de_ensaio: "Ensaio Externo",
+        titulo: "Sessão Fotográfica Golden Hour - Parque da Cidade",
+        descricao: "Ensaio ao ar livre durante o horário dourado. Locação no Parque da Cidade com cenários naturais. Inclui 30 fotos editadas, 3 horas de sessão e acessórios básicos.",
+        preco_inicial: 35000, // R$ 350,00
+        lance_minimo: 7500,   // R$ 75,00
+        duracao_do_leilao: 36, // 36 horas
+        data_prevista: new Date(now.getTime() + 8 * 60 * 1000).toISOString(), // Inicia em 8 minutos
+      },
+      {
+        creator_id: 3,
+        tipo_de_ensaio: "Ensaio Temático",
+        titulo: "Ensaio Pin-up Vintage - Década de 50",
+        descricao: "Ensaio temático inspirado na década de 50 com figurino pin-up. Inclui cenário vintage, maquiagem retrô, 25 fotos editadas e consultoria de estilo completa.",
+        preco_inicial: 45000, // R$ 450,00
+        lance_minimo: 10000,  // R$ 100,00
+        duracao_do_leilao: 48, // 48 horas
+        data_prevista: new Date(now.getTime() + 12 * 60 * 1000).toISOString(), // Inicia em 12 minutos
+      },
+      {
+        creator_id: 4,
+        tipo_de_ensaio: "Ensaio Profissional",
+        titulo: "Book Profissional para Portfolio - Alta Costura",
+        descricao: "Ensaio profissional para criação de portfolio. Foco em alta costura com múltiplos looks. Inclui 40 fotos editadas, 4 horas de sessão, styling e produção completa.",
+        preco_inicial: 60000, // R$ 600,00
+        lance_minimo: 15000,  // R$ 150,00
+        duracao_do_leilao: 72, // 72 horas
+        data_prevista: new Date(now.getTime() + 15 * 60 * 1000).toISOString(), // Inicia em 15 minutos
+      }
+    ];
+
+    try {
+      const createdAuctions: Auction[] = [];
+      
+      for (const auctionData of testAuctions) {
+        console.log(`🎯 Criando leilão: ${auctionData.titulo}`);
+        const response = await auctionsAPI.createAuction(auctionData);
+        
+        if (response.success && response.auction) {
+          createdAuctions.push(response.auction);
+          console.log(`✅ Leilão criado: ID ${response.auction.id} - ${response.auction.titulo}`);
+        }
+      }
+
+      return {
+        success: true,
+        message: `${createdAuctions.length} leilões de teste criados com sucesso!`,
+        auctions: createdAuctions
+      };
+    } catch (error) {
+      console.error('❌ Erro ao criar leilões de teste:', error);
+      return {
+        success: false,
+        message: `Erro ao criar leilões: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
+        auctions: []
+      };
+    }
+  },
 };
 
 // === ESTATÍSTICAS GERAIS (CALCULADAS LOCALMENTE) ===
@@ -1030,6 +1111,36 @@ export const auctionsAPI = {
     return data;
   },
 
+  // Criar novo leilão (Admin)
+  createAuction: async (auctionData: CreateAuctionRequest): Promise<CreateAuctionResponse> => {
+    const url = `${API_BASE_URL}/api/v1/admin/auctions`;
+    
+    // Para criação via admin, usar JSON em vez de FormData
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: getHeaders(true),
+      body: JSON.stringify({
+        creator_id: auctionData.creator_id,
+        tipo_de_ensaio: auctionData.tipo_de_ensaio,
+        titulo: auctionData.titulo,
+        descricao: auctionData.descricao,
+        preco_inicial: auctionData.preco_inicial,
+        lance_minimo: auctionData.lance_minimo,
+        duracao_do_leilao: auctionData.duracao_do_leilao,
+        data_prevista: auctionData.data_prevista,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+    }
+
+    console.log('✅ Leilão criado com sucesso:', data);
+    return data;
+  },
+
   // Listar apenas leilões pendentes (em análise)
   getPendingAuctions: async () => {
     const allAuctions = await auctionsAPI.getAllAuctions('em_analise');
@@ -1132,7 +1243,9 @@ export const auctionsAPI = {
     return data;
   },
 
-  // Finalizar leilão manualmente (transferir MediaCoins + liberar mídia)
+  // Finalizar leilão manualmente - COM OU SEM lances
+  // - Sem lances: apenas altera status para "finalizado_sem_lances" 
+  // - Com lances: transfere MediaCoins e finaliza normalmente
   finalizeAuctionManually: async (
     auctionId: number, 
     request?: FinalizeAuctionRequest
@@ -1148,10 +1261,32 @@ export const auctionsAPI = {
     const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
+      // Tratar especificamente o caso de "Lance aprovado não encontrado"
+      const errorMessage = data.detail || data.message || `HTTP error! status: ${response.status}`;
+      
+      if (errorMessage.includes('Lance aprovado não encontrado')) {
+        console.log(`ℹ️ Leilão ${auctionId} será finalizado SEM lances (nenhum lance aprovado encontrado)`);
+        // Re-throw com mensagem mais amigável
+        throw new Error('Leilão será finalizado sem transferência (nenhum lance aprovado encontrado)');
+      }
+      
+      throw new Error(errorMessage);
     }
 
-    console.log(`✅ Leilão ${auctionId} finalizado manualmente:`, data);
+    // Verificar se foi finalizado COM ou SEM lances
+    const hasWinner = data.winner !== null && data.winner !== undefined;
+    const transferAmount = data.creator?.received || 0;
+    
+    if (hasWinner && transferAmount > 0) {
+      console.log(`✅ Leilão ${auctionId} finalizado COM transferência:`, {
+        vencedor: data.winner?.user_name,
+        valor: transferAmount,
+        creator: data.creator?.creator_name
+      });
+    } else {
+      console.log(`✅ Leilão ${auctionId} finalizado SEM transferência (sem lances válidos)`);
+    }
+
     return data;
   }
 };

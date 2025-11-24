@@ -49,10 +49,20 @@ export default function TransferirMediacoinsPage() {
       setProcessingAuctions(prev => new Set([...prev, auctionId]));
     },
     onSuccess: (data, variables) => {
-      toast.success(
-        `Leilão "${data.titulo}" finalizado com sucesso! ` +
-        `${data.mediacoins_transferidos} MediaCoins transferidos.`
-      );
+      // Verificar se houve transferência ou apenas mudança de status
+      const hasTransfer = data.winner && data.creator.received > 0;
+      
+      if (hasTransfer) {
+        toast.success(
+          `Leilão finalizado com sucesso! ` +
+          `${data.creator.received} MediaCoins transferidos para ${data.creator.creator_name}.`
+        );
+      } else {
+        toast.success(
+          `Leilão finalizado sem transferência (nenhum lance aprovado encontrado).`
+        );
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['expired-auctions'] });
       setProcessingAuctions(prev => {
         const newSet = new Set(prev);
@@ -61,7 +71,16 @@ export default function TransferirMediacoinsPage() {
       });
     },
     onError: (error, variables) => {
-      toast.error(`Erro ao finalizar leilão: ${error.message}`);
+      // Verificar se é o caso especial de "sem lances" (que na verdade é sucesso)
+      if (error.message.includes('nenhum lance aprovado encontrado')) {
+        toast.success(
+          `Leilão finalizado sem transferência (nenhum lance aprovado encontrado).`
+        );
+        queryClient.invalidateQueries({ queryKey: ['expired-auctions'] });
+      } else {
+        toast.error(`Erro ao finalizar leilão: ${error.message}`);
+      }
+      
       setProcessingAuctions(prev => {
         const newSet = new Set(prev);
         newSet.delete(variables.auctionId);
@@ -71,23 +90,25 @@ export default function TransferirMediacoinsPage() {
   });
 
   const handleFinalizeAuction = async (auction: ExpiredAuction) => {
-    const confirmed = window.confirm(
-      `Confirma a finalização do leilão "${auction.titulo}"?\n\n` +
-      `Ações que serão executadas:\n` +
-      `• Transferir MediaCoins para o vencedor\n` +
-      `• Liberar mídia para o vencedor\n` +
-      `• Alterar status para "finalizado"\n\n` +
-      `Esta ação não pode ser desfeita.`
-    );
-
-    if (confirmed) {
-      finalizeMutation.mutate({
-        auctionId: auction.auction_id,
-        request: {
-          observacoes: `Finalização manual - Admin: ${new Date().toLocaleString()}`
-        }
-      });
+    const hasWinner = auction.has_winner && auction.winner;
+    
+    // Mostrar toast informativo sobre a ação
+    if (hasWinner) {
+      toast.info(
+        `Finalizando leilão "${auction.titulo}" com transferência de ${formatCurrency(auction.winner?.bid_value || 0)} para ${auction.creator.creator_name}...`
+      );
+    } else {
+      toast.info(
+        `Finalizando leilão "${auction.titulo}" sem transferência (nenhum lance aprovado)...`
+      );
     }
+
+    finalizeMutation.mutate({
+      auctionId: auction.auction_id,
+      request: {
+        observacoes: `Finalização manual ${hasWinner ? 'COM' : 'SEM'} transferência - Admin: ${new Date().toLocaleString()}`
+      }
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -397,51 +418,67 @@ export default function TransferirMediacoinsPage() {
                 </div>
 
                 {/* Ações */}
-                <div className="flex justify-between items-center pt-4 border-t">
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setSelectedAuction(
-                        selectedAuction === auction.auction_id ? null : auction.auction_id
-                      )}
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      {selectedAuction === auction.auction_id ? 'Ocultar' : 'Ver'} Detalhes
-                    </Button>
-                  </div>
+                <div className="flex flex-col gap-4 pt-4 border-t">
+                  <div className="flex justify-between items-center">
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedAuction(
+                          selectedAuction === auction.auction_id ? null : auction.auction_id
+                        )}
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        {selectedAuction === auction.auction_id ? 'Ocultar' : 'Ver'} Detalhes
+                      </Button>
+                    </div>
 
-                  {auction.can_be_finalized && auction.has_winner && (
-                    <Button
-                      onClick={() => handleFinalizeAuction(auction)}
-                      disabled={processingAuctions.has(auction.auction_id)}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
-                      {processingAuctions.has(auction.auction_id) ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Processando...
-                        </>
-                      ) : (
-                        <>
-                          <Coins className="h-4 w-4 mr-2" />
-                          Finalizar & Transferir
-                        </>
-                      )}
-                    </Button>
-                  )}
+                    {/* Botão de finalização - aparece quando:
+                        1. Leilão pode ser finalizado E tem vencedor OU
+                        2. Leilão expirado (mesmo sem lances) OU
+                        3. Leilão requer ação manual */}
+                    {(auction.can_be_finalized || auction.status === 'expirado' || auction.requires_manual_action) && (
+                      <Button
+                        onClick={() => handleFinalizeAuction(auction)}
+                        disabled={processingAuctions.has(auction.auction_id)}
+                        className={auction.has_winner ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"}
+                      >
+                        {processingAuctions.has(auction.auction_id) ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Processando...
+                          </>
+                        ) : auction.has_winner ? (
+                          <>
+                            <Coins className="h-4 w-4 mr-2" />
+                            Finalizar & Transferir
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Finalizar Sem Lance
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </div>
                   
-                  {!auction.can_be_finalized && (
-                    <div className="text-sm text-muted-foreground bg-gray-100 p-2 rounded">
-                      ⚠️ Leilão não pode ser finalizado automaticamente
-                    </div>
-                  )}
-                  
-                  {auction.can_be_finalized && !auction.has_winner && (
-                    <div className="text-sm text-yellow-700 bg-yellow-100 p-2 rounded">
-                      ⚠️ Sem vencedor para finalizar
-                    </div>
-                  )}
+                  {/* Mensagens informativas */}
+                  <div className="flex flex-col gap-2">
+                    {/* Mensagem quando leilão não pode ser finalizado */}
+                    {!auction.can_be_finalized && auction.status !== 'expirado' && !auction.requires_manual_action && (
+                      <div className="text-sm text-muted-foreground bg-gray-100 p-2 rounded">
+                        ⚠️ Leilão não pode ser finalizado no momento
+                      </div>
+                    )}
+                    
+                    {/* Informação adicional para leilões sem vencedor que podem ser finalizados */}
+                    {(auction.can_be_finalized || auction.status === 'expirado' || auction.requires_manual_action) && !auction.has_winner && (
+                      <div className="text-sm text-blue-700 bg-blue-100 p-2 rounded">
+                        ℹ️ Este leilão será finalizado sem transferência de MediaCoins (nenhum lance válido encontrado)
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Detalhes Expandidos */}
