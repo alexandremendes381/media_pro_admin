@@ -19,6 +19,7 @@ import {
 import StepValidation from "@/components/StepValidation";
 import { userValidationAPI } from "@/lib/api";
 import { PendingUser, CreatorStepsResponse } from "@/types/api";
+import { toast } from "sonner";
 
 interface CreatorStepValidationProps {
   user: PendingUser;
@@ -86,18 +87,18 @@ const CreatorStepValidation: React.FC<CreatorStepValidationProps> = ({ user, onB
       queryClient.invalidateQueries({ queryKey: ['creator-steps'] });
       queryClient.invalidateQueries({ queryKey: ['users'] });
       
-      alert(`✅ ${response.message}`);
+      toast.success(`✅ ${response.message}`);
       refetchSteps();
     },
     onError: (error: any) => {
       console.error('Erro ao validar passo:', error);
-      alert(`❌ Erro ao validar passo: ${error.message}`);
+      toast.error(`❌ Erro ao validar passo: ${error.message}`);
     },
   });
 
   const handleValidateStep = (stepNumber: number, approved: boolean, observations?: string, rejectionReason?: string) => {
     if (!approved && !rejectionReason?.trim()) {
-      alert('Por favor, informe o motivo da reprovação.');
+      toast.error('Por favor, informe o motivo da reprovação.');
       return;
     }
 

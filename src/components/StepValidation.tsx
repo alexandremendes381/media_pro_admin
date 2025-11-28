@@ -5,13 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import CreatorImage from "@/components/CreatorImage";
-import { 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
-  User, 
-  MapPin, 
-  Calendar, 
+import { toast } from "sonner";
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  User,
   Mail,
   CreditCard,
   Camera,
@@ -93,6 +92,14 @@ const StepValidation: React.FC<StepValidationProps> = ({
               <span className="font-medium">País:</span>
               <p className="text-muted-foreground">{step.dados.pais}</p>
             </div>
+            <div>
+              <span className="font-medium">estado:</span>
+              <p className="text-muted-foreground">{step.dados.estado}</p>
+            </div>
+            <div>
+              <span className="font-medium">cidade:</span>
+              <p className="text-muted-foreground">{step.dados.cidade}</p>
+            </div>
           </div>
         );
 
@@ -104,9 +111,18 @@ const StepValidation: React.FC<StepValidationProps> = ({
                 <span className="font-medium">Nome do Perfil:</span>
                 <p className="text-muted-foreground">{step.dados.nome_perfil}</p>
               </div>
+             
               <div>
-                <span className="font-medium">Username MediaPro:</span>
-                <p className="text-muted-foreground">{step.dados.mediapro_username}</p>
+                <span className="font-medium">instagram:</span>
+                <p className="text-muted-foreground">{step.dados.instagram || "N/A"}</p>
+              </div>
+              <div>
+                <span className="font-medium">X:</span>
+                <p className="text-muted-foreground">{step.dados.twitter || "N/A"}</p>
+              </div>
+                            <div>
+                <span className="font-medium">Youtube:</span>
+                <p className="text-muted-foreground">{step.dados.youtube || "N/A"}</p>
               </div>
             </div>
             {step.dados.tem_image_perfil && (
@@ -252,11 +268,10 @@ const StepValidation: React.FC<StepValidationProps> = ({
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-              step.status_validacao === 'aprovado' ? 'bg-green-100 text-green-600' :
-              step.status_validacao === 'reprovado' ? 'bg-red-100 text-red-600' :
-              step.completo ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
-            }`}>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${step.status_validacao === 'aprovado' ? 'bg-green-100 text-green-600' :
+                step.status_validacao === 'reprovado' ? 'bg-red-100 text-red-600' :
+                  step.completo ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-600'
+              }`}>
               <IconComponent className="w-5 h-5" />
             </div>
             <div>
@@ -267,15 +282,15 @@ const StepValidation: React.FC<StepValidationProps> = ({
               </Badge>
             </div>
           </div>
-          
+
           {/* Só mostrar botões se ainda não foi validado */}
           {step.status_validacao === 'aguardando' && (
             <div className="flex gap-2">
               <Button
                 size="sm"
                 onClick={() => {
-                  setValidationType('approve');
-                  setShowValidationModal(true);
+                  toast.info(`Aprovando passo ${step.step}: ${step.nome}...`);
+                  onValidate(step.step, true, 'Aprovado diretamente pelo admin');
                 }}
                 disabled={isLoading}
                 className="bg-green-600 hover:bg-green-700"
@@ -310,7 +325,7 @@ const StepValidation: React.FC<StepValidationProps> = ({
           )}
         </CardTitle>
       </CardHeader>
-      
+
       <CardContent>
         {/* Mostrar motivo da reprovação se existir */}
         {step.status_validacao === 'reprovado' && step.dados?.motivo_rejeicao && (
@@ -339,11 +354,11 @@ const StepValidation: React.FC<StepValidationProps> = ({
               {validationType === 'approve' ? 'Aprovar' : 'Reprovar'} Passo {step.step}
             </h3>
             <p className="text-muted-foreground mb-4">
-              {validationType === 'approve' 
-                ? 'Tem certeza que deseja aprovar este passo?' 
+              {validationType === 'approve'
+                ? 'Tem certeza que deseja aprovar este passo?'
                 : 'Informe o motivo da reprovação:'}
             </p>
-            
+
             {validationType === 'reject' && (
               <textarea
                 id="rejection-reason"
@@ -352,7 +367,7 @@ const StepValidation: React.FC<StepValidationProps> = ({
                 placeholder="Motivo da reprovação..."
               />
             )}
-            
+
             <div className="flex gap-2 justify-end">
               <Button
                 variant="outline"
@@ -366,10 +381,17 @@ const StepValidation: React.FC<StepValidationProps> = ({
               <Button
                 onClick={() => {
                   const isApproved = validationType === 'approve';
-                  const reason = validationType === 'reject' 
-                    ? (document.getElementById('rejection-reason') as HTMLTextAreaElement)?.value 
+                  const reason = validationType === 'reject'
+                    ? (document.getElementById('rejection-reason') as HTMLTextAreaElement)?.value
                     : undefined;
-                  
+
+                  // Mostrar toast informativo antes de processar
+                  if (isApproved) {
+                    toast.info(`Aprovando passo ${step.step}: ${step.nome}...`);
+                  } else {
+                    toast.info(`Reprovando passo ${step.step}: ${step.nome}...`);
+                  }
+
                   onValidate(step.step, isApproved, undefined, reason);
                   setShowValidationModal(false);
                   setValidationType(null);

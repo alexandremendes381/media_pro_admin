@@ -15,6 +15,7 @@ import CreatorStepValidation from "@/components/CreatorStepValidation";
 import { userValidationAPI, authAPI, apiUtils } from "@/lib/api";
 import { PendingUser } from "@/types/api";
 import { useAuthContext } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 function StatusBadge({ status }: { status?: 'em_analise' | 'aprovado' | 'reprovado' }) {
   const variants = {
@@ -125,11 +126,11 @@ export default function ValidarUsuariosPage() {
       queryClient.invalidateQueries({ queryKey: ['users'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
       
-      alert(response.message || 'Operação realizada com sucesso!');
+      toast.success(response.message || 'Operação realizada com sucesso!');
     },
     onError: (error: any) => {
       console.error('Erro ao processar usuário:', error);
-      alert('Erro ao processar usuário: ' + error.message);
+      toast.error('Erro ao processar usuário: ' + error.message);
     },
   });
 
@@ -147,7 +148,7 @@ export default function ValidarUsuariosPage() {
 
   const confirmReject = () => {
     if (!rejectReason.trim()) {
-      alert('Por favor, informe o motivo da reprovação.');
+      toast.error('Por favor, informe o motivo da reprovação.');
       return;
     }
 
@@ -235,7 +236,7 @@ export default function ValidarUsuariosPage() {
       });
     } catch (error: any) {
       console.error('❌ Erro ao carregar documentos:', error);
-      alert('Erro ao carregar documentos: ' + error.message);
+      toast.error('Erro ao carregar documentos: ' + error.message);
       setShowDocumentsModal(false);
     } finally {
       setLoadingDocuments(false);
@@ -391,7 +392,7 @@ export default function ValidarUsuariosPage() {
                 console.log('❌ Nenhum usuário disponível para teste');
               }
                 
-              alert('🔧 Debug completo! Verifique o console (F12) para ver os novos endpoints e testes.');
+              toast.success('🔧 Debug completo! Verifique o console (F12) para ver os novos endpoints e testes.');
             }} 
             variant="outline" 
             size="sm"
