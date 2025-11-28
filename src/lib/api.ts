@@ -13,8 +13,6 @@ import {
   Auction,
   AuctionStatusUpdate,
   AuctionStats,
-  CreateAuctionRequest,
-  CreateAuctionResponse,
   UpgradeRequest,
   UpgradeApprovalRequest,
   UpgradeApprovalResponse,
@@ -778,85 +776,6 @@ export const apiUtils = {
       return { level: 'critical', label: 'Crítico', color: 'red' };
     }
   },
-
-  // Criar leilões de teste para demonstração
-  createTestAuctions: async (): Promise<{
-    success: boolean;
-    message: string;
-    auctions: Auction[];
-  }> => {
-    const now = new Date();
-    
-    const testAuctions: CreateAuctionRequest[] = [
-      {
-        creator_id: 1, // Assumindo que existe um creator com ID 1
-        tipo_de_ensaio: "Fotografia",
-        titulo: "Ensaio Artístico em Estúdio - Conceito Minimalista",
-        descricao: "Ensaio fotográfico profissional em estúdio com conceito minimalista. Inclui 20 fotos editadas em alta resolução, 2 horas de sessão e direção artística especializada.",
-        preco_inicial: 25000, // R$ 250,00 em centavos
-        lance_minimo: 5000,   // R$ 50,00 em centavos
-        duracao_do_leilao: 24, // 24 horas
-        data_prevista: new Date(now.getTime() + 5 * 60 * 1000).toISOString(), // Inicia em 5 minutos
-      },
-      {
-        creator_id: 2,
-        tipo_de_ensaio: "Ensaio Externo",
-        titulo: "Sessão Fotográfica Golden Hour - Parque da Cidade",
-        descricao: "Ensaio ao ar livre durante o horário dourado. Locação no Parque da Cidade com cenários naturais. Inclui 30 fotos editadas, 3 horas de sessão e acessórios básicos.",
-        preco_inicial: 35000, // R$ 350,00
-        lance_minimo: 7500,   // R$ 75,00
-        duracao_do_leilao: 36, // 36 horas
-        data_prevista: new Date(now.getTime() + 8 * 60 * 1000).toISOString(), // Inicia em 8 minutos
-      },
-      {
-        creator_id: 3,
-        tipo_de_ensaio: "Ensaio Temático",
-        titulo: "Ensaio Pin-up Vintage - Década de 50",
-        descricao: "Ensaio temático inspirado na década de 50 com figurino pin-up. Inclui cenário vintage, maquiagem retrô, 25 fotos editadas e consultoria de estilo completa.",
-        preco_inicial: 45000, // R$ 450,00
-        lance_minimo: 10000,  // R$ 100,00
-        duracao_do_leilao: 48, // 48 horas
-        data_prevista: new Date(now.getTime() + 12 * 60 * 1000).toISOString(), // Inicia em 12 minutos
-      },
-      {
-        creator_id: 4,
-        tipo_de_ensaio: "Ensaio Profissional",
-        titulo: "Book Profissional para Portfolio - Alta Costura",
-        descricao: "Ensaio profissional para criação de portfolio. Foco em alta costura com múltiplos looks. Inclui 40 fotos editadas, 4 horas de sessão, styling e produção completa.",
-        preco_inicial: 60000, // R$ 600,00
-        lance_minimo: 15000,  // R$ 150,00
-        duracao_do_leilao: 72, // 72 horas
-        data_prevista: new Date(now.getTime() + 15 * 60 * 1000).toISOString(), // Inicia em 15 minutos
-      }
-    ];
-
-    try {
-      const createdAuctions: Auction[] = [];
-      
-      for (const auctionData of testAuctions) {
-        console.log(`🎯 Criando leilão: ${auctionData.titulo}`);
-        const response = await auctionsAPI.createAuction(auctionData);
-        
-        if (response.success && response.auction) {
-          createdAuctions.push(response.auction);
-          console.log(`✅ Leilão criado: ID ${response.auction.id} - ${response.auction.titulo}`);
-        }
-      }
-
-      return {
-        success: true,
-        message: `${createdAuctions.length} leilões de teste criados com sucesso!`,
-        auctions: createdAuctions
-      };
-    } catch (error) {
-      console.error('❌ Erro ao criar leilões de teste:', error);
-      return {
-        success: false,
-        message: `Erro ao criar leilões: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
-        auctions: []
-      };
-    }
-  },
 };
 
 // === ESTATÍSTICAS GERAIS (CALCULADAS LOCALMENTE) ===
@@ -1111,36 +1030,6 @@ export const auctionsAPI = {
     return data;
   },
 
-  // Criar novo leilão (Admin)
-  createAuction: async (auctionData: CreateAuctionRequest): Promise<CreateAuctionResponse> => {
-    const url = `${API_BASE_URL}/api/v1/admin/auctions`;
-    
-    // Para criação via admin, usar JSON em vez de FormData
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: getHeaders(true),
-      body: JSON.stringify({
-        creator_id: auctionData.creator_id,
-        tipo_de_ensaio: auctionData.tipo_de_ensaio,
-        titulo: auctionData.titulo,
-        descricao: auctionData.descricao,
-        preco_inicial: auctionData.preco_inicial,
-        lance_minimo: auctionData.lance_minimo,
-        duracao_do_leilao: auctionData.duracao_do_leilao,
-        data_prevista: auctionData.data_prevista,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.detail || data.message || `HTTP error! status: ${response.status}`);
-    }
-
-    console.log('✅ Leilão criado com sucesso:', data);
-    return data;
-  },
-
   // Listar apenas leilões pendentes (em análise)
   getPendingAuctions: async () => {
     const allAuctions = await auctionsAPI.getAllAuctions('em_analise');
@@ -1291,114 +1180,6 @@ export const auctionsAPI = {
   }
 };
 
-// === GERENCIAMENTO DE POSTS ===
-
-export const postsAPI = {
-  // Listar todos os posts (admin)
-  getAllPosts: async (params?: {
-    creator_id?: number;
-    page?: number;
-    limit?: number;
-  }): Promise<{
-    posts: Array<{
-      id: number;
-      creator_id: number;
-      nome_artistico: string;
-      titulo: string;
-      descricao?: string;
-      total_imagens: number;
-      created_at: string;
-    }>;
-    total: number;
-    page: number;
-    limit: number;
-  }> => {
-    const queryParams = new URLSearchParams();
-    
-    if (params?.creator_id) {
-      queryParams.append('creator_id', params.creator_id.toString());
-    }
-    if (params?.page) {
-      queryParams.append('page', params.page.toString());
-    }
-    if (params?.limit) {
-      queryParams.append('limit', params.limit.toString());
-    }
-
-    const query = queryParams.toString();
-    const url = `${API_BASE_URL}/api/v1/admin/posts${query ? `?${query}` : ''}`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: getHeaders(true),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return data;
-  },
-
-  // Obter post específico com todas as imagens
-  getPost: async (postId: number): Promise<{
-    id: number;
-    creator_id: number;
-    nome_artistico: string;
-    titulo: string;
-    descricao?: string;
-    imagens: Array<{
-      id: number;
-      image_data: string;
-      image_tipo: string;
-      image_ordem: number;
-    }>;
-    total_imagens: number;
-    created_at: string;
-  }> => {
-    const url = `${API_BASE_URL}/api/v1/admin/posts/${postId}`;
-    
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: getHeaders(true),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return data;
-  },
-
-  // Deletar post (admin)
-  deletePost: async (postId: number): Promise<{
-    message: string;
-    post_id: number;
-    titulo: string;
-  }> => {
-    const url = `${API_BASE_URL}/api/v1/admin/posts/${postId}`;
-    
-    const response = await fetch(url, {
-      method: 'DELETE',
-      headers: getHeaders(true),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.message || `HTTP error! status: ${response.status}`);
-    }
-
-    return data;
-  },
-
-
-};
-
 // === EXEMPLO DE USO DAS NOVAS APIS ===
 
 /*
@@ -1441,15 +1222,11 @@ FLUXO COMPLETO COM APIS REAIS:
    await api.auctions.approveAuction(1);
    await api.auctions.rejectAuction(2);
 
-9. Ver Posts com Imagens:
-   const posts = await api.posts.getAllPosts({ page: 1, limit: 10 });
-   const post = await api.posts.getPost(1); // com imagens base64
-
-10. Informações do Sistema:
+9. Informações do Sistema:
    const systemInfo = await api.system.getSystemInfo();
    const backup = await api.system.generateBackup();
 
-ENDPOINTS IMPLEMENTADOS (17):
+ENDPOINTS IMPLEMENTADOS (14):
 ✅ POST /api/v1/admin/login
 ✅ GET /api/v1/admin/stats (calculado localmente)
 ✅ GET /api/v1/admin/creators
@@ -1462,9 +1239,6 @@ ENDPOINTS IMPLEMENTADOS (17):
 ✅ GET /api/v1/admin/reports/creators-by-status
 ✅ GET /api/v1/admin/reports/planos
 ✅ GET /api/v1/admin/creators/{id}/planos
-✅ GET /api/v1/admin/posts
-✅ GET /api/v1/admin/posts/{id}
-✅ DELETE /api/v1/admin/posts/{id}
 ✅ GET /api/v1/admin/system/info
 ✅ POST /api/v1/admin/system/backup
 */
@@ -1920,7 +1694,6 @@ const api = {
   userValidation: userValidationAPI,
   creatorRegistration: creatorRegistrationAPI,
   auctions: auctionsAPI,
-  posts: postsAPI,
   reports: reportsAPI,
   plans: plansAPI,
   system: systemAPI,
