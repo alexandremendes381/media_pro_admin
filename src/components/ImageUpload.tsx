@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Upload, Image as ImageIcon, CheckCircle, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface ImageUploadProps {
   tipoDocumento: 'documento_frente' | 'documento_verso' | 'selfie_documento';
@@ -34,13 +35,13 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
   const handleFileSelect = (file: File) => {
     // Validar se é uma imagem
     if (!file.type.startsWith('image/')) {
-      alert('Por favor, selecione apenas arquivos de imagem (PNG, JPG, JPEG, WEBP, etc.)');
+      toast.error('Por favor, selecione apenas arquivos de imagem (PNG, JPG, JPEG, WEBP, etc.)');
       return;
     }
 
     // Validar tamanho (máximo 10MB)
     if (file.size > 10 * 1024 * 1024) {
-      alert('A imagem deve ter no máximo 10MB');
+      toast.error('A imagem deve ter no máximo 10MB');
       return;
     }
 
