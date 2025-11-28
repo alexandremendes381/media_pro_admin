@@ -14,9 +14,7 @@ import {
   LogOut,
   User,
   Shield,
-  FileText,
-  Coins,
-  Plus
+  Coins
 } from "lucide-react";
 import { ModeToggle } from "@/components/mode-toggle";
 import { useState } from "react";
@@ -34,11 +32,6 @@ const sidebarItems = [
     icon: UserCheck,
   },
   {
-    title: "Posts dos Creators",
-    href: "/posts",
-    icon: FileText,
-  },
-  {
     title: "Validar Leilão",
     href: "/validar-leilao",
     icon: Gavel,
@@ -47,11 +40,6 @@ const sidebarItems = [
     title: "Transferir MediaCoins",
     href: "/transferir-mediacoins",
     icon: Coins,
-  },
-  {
-    title: "Criar Leilões",
-    href: "/criar-leiloes",
-    icon: Plus,
   },
   {
     title: "Gerenciar Creators",
